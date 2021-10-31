@@ -17,12 +17,7 @@ describe('Token Contract', () => {
         token = await Token.deploy(ethers.utils.parseEther('1000000000'));
     });
 
-    describe('Deployment', () => { 
-        // it("Should set the right owher", async () => {
-        //     expect(await token.balanceOf(owner.address)).to.equals(await token.totalSupply());
-            
-        // });
-        
+    describe('Deployment', () => {         
         it('Should assign the total supply of tokens to the owner', async () => {
             const ownerBalance = await token.balanceOf(owner.address);
             expect(await token.totalSupply()).to.equal(ownerBalance);
