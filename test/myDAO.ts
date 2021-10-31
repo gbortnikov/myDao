@@ -1,7 +1,13 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { Contract, ContractFactory } from "ethers";
 
+// import "web3";
+// import {Web3} from "web3";
+// var Web3 = require('web3');
+// var web3 = new Web3(Web3.givenProvider || 'ws://some.local-or-remote.node:8546');
+
 import "@nomiclabs/hardhat-web3";
+import {web3} from "hardhat";
 
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
@@ -38,6 +44,30 @@ describe('Контракт моста', () => {
         it('1.2) Контракт должен присвоить правильный period', async () => {
             expect(await dao.getPeriod()).to.equal(3);
         });
+    });
+
+    describe('2) Функция Proposal', () => { 
+        it('2.1) Шифруем с помощью web3 функцию', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+
+            console.log(callData);
+        });
+
+        // it('2.2) Контракт должен добавить все данные в proposals', async () => {
+        //     await dao.addProposal("Добавить функцию", )
+        //     expect(await dao.getMinQorum()).to.equal(100);
+        // });
+
     });
 
 });
