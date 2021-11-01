@@ -42,7 +42,7 @@ describe('Контракт моста', () => {
         });
 
         it('1.2) Контракт должен присвоить правильный period', async () => {
-            expect(await dao.getPeriod()).to.equal(3);
+            expect(await dao.getPeriod()).to.equal(3*86400);
         });
     });
 
@@ -145,6 +145,7 @@ describe('Контракт моста', () => {
                     }
                 ]
             });
+            
             await dao.addProposal("Функция hello", callData, addr1.address);
 
             await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
@@ -155,6 +156,38 @@ describe('Контракт моста', () => {
             let userInfo = await dao.getUserProposalInfoFrom(0, addr1.address);
             expect(userInfo[0]).to.equal(true);
             expect(userInfo[1]).to.equal(ethers.utils.parseEther("100"));
+        });
+    });
+    
+    describe('5) Функция finishVote', () => { 
+        
+        it('5.1) Нельзя завершить неактивное голосование', async () => {
+            await expect(dao.connect(addr1).finishVote(0)).to.be.revertedWith("finishVote:: proposals do not have status Active"); 
+        });
+
+        it('5.2) Нельзя завершить голосование у которого еще не закончилось время', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+            await dao.addProposal("Функция hello", callData, addr1.address);
+
+            await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
+            await dao.connect(addr1).vote(1, 0);
+
+            let proposalInfo = await dao.getProposalInfo(0);
+            console.log(proposalInfo.toString());
+            
+            await expect(dao.connect(addr1).finishVote(0)).to.be.revertedWith("finishVote:: time for voting is not over yet"); 
         });
     });
 

@@ -12,6 +12,7 @@ import "hardhat/console.sol";
 
 contract MyDAO is AccessControl{
     using SafeERC20 for IERC20;
+    
     uint256 private proposalId;
     uint256 private minQorum;
     uint256 private period;
@@ -37,12 +38,13 @@ contract MyDAO is AccessControl{
         mapping(address => User) voters;
         uint256 timeBegin;
         uint256 timeEnd;
+        uint256 minQorum; 
     }
 
-    constructor (uint256 _minQorum, uint256 _period, uint256 _voteCost,address _tokenAddress) {
+    constructor (uint256 _minQorum, uint256 _periodInDays, uint256 _voteCost,address _tokenAddress) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         minQorum = _minQorum;
-        period = _period;
+        period = _periodInDays * 86400;//86400 - number of seconds in one day
         voteCost = _voteCost;
         token = IERC20(_tokenAddress);
     }
@@ -58,6 +60,9 @@ contract MyDAO is AccessControl{
         proposal.name = _name;
         proposal.callData = _callData;
         proposal.recipient = _recipient;
+        proposal.timeBegin = block.timestamp;
+        proposal.timeEnd = proposal.timeBegin + period;
+        proposal.minQorum = minQorum;
         proposal.state = State.Active;
         proposalId++;
     }
@@ -76,7 +81,13 @@ contract MyDAO is AccessControl{
         users[msg.sender].amount -= voteCost;
     }
 
+    function finishVote(uint256 _proposalId) external {
+        Proposal storage proposal = proposals[proposalId];
+        require(proposal.state == State.Active, "finishVote:: proposals do not have status Active");
+        require(proposal.timeEnd > block.timestamp, "finishVote:: time for voting is not over yet");
+    }
 
+    
 
 
 
@@ -88,13 +99,21 @@ contract MyDAO is AccessControl{
     function getProposalInfo(uint256 _proposalId) external view returns(
         string memory,
         bytes memory,
-        address
+        address,
+        State,
+        uint256,
+        uint256,
+        uint256
     ) {
         Proposal storage proposal = proposals[_proposalId]; 
         return (
             proposal.name,
             proposal.callData,
-            proposal.recipient
+            proposal.recipient,
+            proposal.state,
+            proposal.timeBegin,
+            proposal.timeEnd,
+            proposal.minQorum
         );
     }
 
@@ -107,6 +126,14 @@ contract MyDAO is AccessControl{
             voter.voted,
             voter.amount
         );
+    }
+
+    function getVoteCost() external view  returns(uint256){
+        return voteCost;
+    }
+
+    function setVoteCost(uint256 _voteCost) external {
+        voteCost = _voteCost;
     }
 
     function getMinQorum() external view returns(uint256) {
