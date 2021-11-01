@@ -30,7 +30,7 @@ describe('Контракт моста', () => {
         token = await Token.deploy(ethers.utils.parseEther('1000000000'));
 
         MyDAO = await ethers.getContractFactory('MyDAO');
-        dao = await MyDAO.deploy(100, 3);
+        dao = await MyDAO.deploy(100, 3, token.address);
 
         // await token.grantRole(token.MINTER_ROLE(), bridgeETH.address);
         // await token.grantRole(token.BURNER_ROLE(), bridgeETH.address);
@@ -72,14 +72,18 @@ describe('Контракт моста', () => {
 
     });
 
-    describe('3) Функция vote', () => { 
-        it('1.1) Контракт должен присвоить правильный minQorum', async () => {
-            expect(await dao.getMinQorum()).to.equal(100);
+    describe('3) Функция deposit', () => { 
+        it('3.1) У пользователя должны списаться токены', async () => {
+            await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
+            
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
+            expect(await token.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("1"));
         });
 
-        it('1.2) Контракт должен присвоить правильный period', async () => {
-            expect(await dao.getPeriod()).to.equal(3);
-        });
+        // it('1.2) Контракт должен присвоить правильный period', async () => {
+        //     expect(await dao.getPeriod()).to.equal(3);
+        // });
     });
 
 });
