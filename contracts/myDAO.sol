@@ -16,6 +16,7 @@ contract MyDAO is AccessControl{
     uint256 private minQorum;
     uint256 private period;
     IERC20 private token;
+    uint256 private voteCost;
 
     enum State {
         Undefined,
@@ -38,10 +39,11 @@ contract MyDAO is AccessControl{
         uint256 timeEnd;
     }
 
-    constructor (uint256 _minQorum, uint256 _period, address _tokenAddress) {
+    constructor (uint256 _minQorum, uint256 _period, uint256 _voteCost,address _tokenAddress) {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
         minQorum = _minQorum;
         period = _period;
+        voteCost = _voteCost;
         token = IERC20(_tokenAddress);
     }
 
@@ -57,18 +59,21 @@ contract MyDAO is AccessControl{
         proposal.callData = _callData;
         proposal.recipient = _recipient;
         proposal.state = State.Active;
-        // proposals[] = Proposal(_name, _callData, _recipient, State.Active, address(0));
         proposalId++;
     }
 
     function deposit (uint256 _amount) external {
-        require(_amount > 0, "deposit:: amount <= 0");
         token.safeTransferFrom(msg.sender, address(this), _amount);
         users[msg.sender].amount = _amount;
     }
 
     function vote(bool _solution, uint256 _proposalId) external {
-        console.log("vote");
+        require(proposals[_proposalId].state == State.Active, "vote:: proposals do not have status Active");
+        require(!proposals[_proposalId].voters[msg.sender].voted, "vote:: user has already voted in this poll");
+        require(users[msg.sender].amount > voteCost, "vote:: the user does not have enough tokens on the account");
+        proposals[_proposalId].voters[msg.sender].voted = true;
+        proposals[_proposalId].voters[msg.sender].amount = voteCost;
+        users[msg.sender].amount -= voteCost;
     }
 
 
@@ -90,6 +95,17 @@ contract MyDAO is AccessControl{
             proposal.name,
             proposal.callData,
             proposal.recipient
+        );
+    }
+
+    function getUserProposalInfoFrom(uint256 _proposalId, address userAddress) external view returns (
+        bool,
+        uint256
+    ) {
+        User storage voter = proposals[_proposalId].voters[userAddress]; 
+        return (
+            voter.voted,
+            voter.amount
         );
     }
 

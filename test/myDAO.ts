@@ -30,7 +30,7 @@ describe('Контракт моста', () => {
         token = await Token.deploy(ethers.utils.parseEther('1000000000'));
 
         MyDAO = await ethers.getContractFactory('MyDAO');
-        dao = await MyDAO.deploy(100, 3, token.address);
+        dao = await MyDAO.deploy(100, 3, ethers.utils.parseEther('100'), token.address);
 
         // await token.grantRole(token.MINTER_ROLE(), bridgeETH.address);
         // await token.grantRole(token.BURNER_ROLE(), bridgeETH.address);
@@ -73,6 +73,7 @@ describe('Контракт моста', () => {
     });
 
     describe('3) Функция deposit', () => { 
+        
         it('3.1) У пользователя должны списаться токены', async () => {
             await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
             await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
@@ -81,9 +82,80 @@ describe('Контракт моста', () => {
             expect(await token.balanceOf(addr1.address)).to.equal(ethers.utils.parseEther("1"));
         });
 
-        // it('1.2) Контракт должен присвоить правильный period', async () => {
-        //     expect(await dao.getPeriod()).to.equal(3);
-        // });
+    });
+
+    describe('4) Функция vote', () => { 
+        
+        it('4.1) Нельзя голосовать если голосование не активно', async () => {
+            await expect(dao.connect(addr1).vote(1, 0)).to.be.revertedWith("vote:: proposals do not have status Active"); 
+        });
+
+        it('4.2) Один и тот же пользователь не может голосовать дважды в одном голосовании', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+            await dao.addProposal("Функция hello", callData, addr1.address);
+
+            await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
+
+            await dao.connect(addr1).vote(1, 0);
+            await expect(dao.connect(addr1).vote(1, 0)).to.be.revertedWith("vote:: user has already voted in this poll"); 
+        });
+
+        it('4.3) Пользователь не может голосавать если у него недостаточно токенов в депозите', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+            await dao.addProposal("Функция hello", callData, addr1.address);
+
+            await token.transfer(addr1.address, ethers.utils.parseEther("99"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("99"));
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("99"));
+
+            await expect(dao.connect(addr1).vote(1, 0)).to.be.revertedWith("vote:: the user does not have enough tokens on the account"); 
+        });
+
+        it('4.4) В голосовании должна появиться информация о пользователе', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+            await dao.addProposal("Функция hello", callData, addr1.address);
+
+            await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
+            await dao.connect(addr1).vote(1, 0);
+
+            let userInfo = await dao.getUserProposalInfoFrom(0, addr1.address);
+            expect(userInfo[0]).to.equal(true);
+            expect(userInfo[1]).to.equal(ethers.utils.parseEther("100"));
+        });
     });
 
 });
