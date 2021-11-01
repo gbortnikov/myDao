@@ -47,7 +47,8 @@ describe('Контракт моста', () => {
     });
 
     describe('2) Функция Proposal', () => { 
-        it('2.1) Шифруем с помощью web3 функцию', async () => {
+
+        it('2.1) Контракт должен добавить все данные в proposals', async () => {
             let callData = web3.eth.abi.encodeFunctionSignature({
                 name: "hello",
                 type: "function",
@@ -60,14 +61,25 @@ describe('Контракт моста', () => {
                 ]
             });
 
-            console.log(callData);
+            await dao.addProposal("Функция hello", callData, addr1.address);
+            let proposalInfo = await dao.getProposalInfo(0);
+            // console.log(proposalInfo[0].toString());
+            
+            expect(proposalInfo[0]).to.equal("Функция hello");
+            expect(proposalInfo[1]).to.equal(callData);
+            expect(proposalInfo[2]).to.equal(addr1.address);
         });
 
-        // it('2.2) Контракт должен добавить все данные в proposals', async () => {
-        //     await dao.addProposal("Добавить функцию", )
-        //     expect(await dao.getMinQorum()).to.equal(100);
-        // });
+    });
 
+    describe('3) Функция vote', () => { 
+        it('1.1) Контракт должен присвоить правильный minQorum', async () => {
+            expect(await dao.getMinQorum()).to.equal(100);
+        });
+
+        it('1.2) Контракт должен присвоить правильный period', async () => {
+            expect(await dao.getPeriod()).to.equal(3);
+        });
     });
 
 });

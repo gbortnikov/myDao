@@ -14,7 +14,7 @@ contract MyDAO is AccessControl{
 
     struct Proposal {
         string name;
-        bytes32 callData;
+        bytes callData;
         address recipient;
     }
 
@@ -26,22 +26,27 @@ contract MyDAO is AccessControl{
 
     mapping(uint256 => Proposal) proposals;
 
-    function addProposal(string memory _name, bytes32 _callData, address _recipient) external {
+    function addProposal(string memory _name, bytes memory _callData, address _recipient) external {
         proposals[proposalId] = Proposal(_name, _callData, _recipient);
         proposalId++;
     }
 
-    // function getProposal(uint256 _proposalId) external view returns(
-    //     string memory,
-    //     bytes32,
-    //     address
-    // ) {
-    //     return (
-    //         proposals[_proposalId].name,
-    //         proposals[_proposalId].callDate,
-    //         proposals[_proposalId].recipient
-    //     );
-    // }
+    function callTest(bytes memory _callData) external {
+        address(this).call(_callData);
+    }
+
+    function getProposalInfo(uint256 _proposalId) external view returns(
+        string memory,
+        bytes memory,
+        address
+    ) {
+        Proposal storage proposal = proposals[_proposalId]; 
+        return (
+            proposal.name,
+            proposal.callData,
+            proposal.recipient
+        );
+    }
 
     function getMinQorum() external view returns(uint256) {
         return minQorum;
