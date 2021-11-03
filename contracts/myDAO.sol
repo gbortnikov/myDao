@@ -55,6 +55,7 @@ contract MyDAO is AccessControl{
 
     mapping(uint256 => Proposal) private proposals;
     mapping(address => User) private users;
+    mapping(address => uint256) private usersDeposit;
     
     
 
@@ -73,21 +74,21 @@ contract MyDAO is AccessControl{
 
     function deposit (uint256 _amount) external {
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        users[msg.sender].amount = _amount;
+        usersDeposit[msg.sender] = _amount;
     }
 
     function vote(bool _solution, uint256 _proposalId) external {
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.state == State.Active, "vote:: proposals do not have status Active");
         require(!proposal.voters[msg.sender].voted, "vote:: user has already voted in this poll");
-        require(users[msg.sender].amount > voteCost, "vote:: the user does not have enough tokens on the account");
+        require(usersDeposit[msg.sender] > voteCost, "vote:: the user does not have enough tokens on the account");
         proposal.voters[msg.sender].voted = true;
         proposal.voteCost = voteCost;
         proposal.voters[msg.sender].amount = proposal.voteCost;
         proposal.totalVote += proposal.voteCost;
         uint256 votesFor = _solution ? proposal.voteCost : 0;
         proposal.votesFor += votesFor;
-        users[msg.sender].amount -= proposal.voteCost;
+        usersDeposit[msg.sender] -= proposal.voteCost;
     }
 
 
@@ -106,15 +107,17 @@ contract MyDAO is AccessControl{
         for (uint256 i = 0; i < proposalId; i++) {
             require(proposals[i].state == State.Finished, "withdraw:: not all proposal finished");
             if(proposals[i].state == State.Finished) {
-                users[msg.sender].amount += proposals[i].voters[msg.sender].amount;
+                usersDeposit[msg.sender] += proposals[i].voters[msg.sender].amount;
+
             }
         }
-        token.transfer(msg.sender, users[msg.sender].amount);
-        users[msg.sender].amount = 0;
+        token.transfer(msg.sender, usersDeposit[msg.sender]);
+        
+        usersDeposit[msg.sender] = 0;
     }
 
     function getUserBalance() external view returns(uint256) {
-        return users[msg.sender].amount;
+        return usersDeposit[msg.sender];
     }
 
     function getProposalInfo(uint256 _proposalId) external view returns(
