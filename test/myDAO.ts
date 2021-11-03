@@ -250,7 +250,7 @@ describe('Контракт моста', () => {
             await expect(dao.connect(addr1).withdraw()).to.be.revertedWith("withdraw:: not all proposal finished"); 
         });
 
-        it('6.2) У пользователя ', async () => {
+        it('6.2) По завершению голосования пользователь может забрать все свои токены', async () => {
             let userInfo;
             let balance;
 

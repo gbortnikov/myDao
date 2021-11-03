@@ -41,7 +41,8 @@ contract MyDAO is AccessControl{
         uint256 timeBegin;
         uint256 timeEnd;
         uint256 minQorum;
-        uint256 roundResult; 
+        uint256 roundResult;
+        uint256 voteCost;
     }
 
     constructor (uint256 _minQorum, uint256 _periodInDays, uint256 _voteCost,address _tokenAddress) {
@@ -52,8 +53,8 @@ contract MyDAO is AccessControl{
         token = IERC20(_tokenAddress);
     }
 
-    mapping(uint256 => Proposal) public proposals;
-    mapping(address => User) public users;
+    mapping(uint256 => Proposal) private proposals;
+    mapping(address => User) private users;
     
     
 
@@ -81,11 +82,12 @@ contract MyDAO is AccessControl{
         require(!proposal.voters[msg.sender].voted, "vote:: user has already voted in this poll");
         require(users[msg.sender].amount > voteCost, "vote:: the user does not have enough tokens on the account");
         proposal.voters[msg.sender].voted = true;
-        proposal.voters[msg.sender].amount = voteCost;
-        proposal.totalVote += voteCost;
-        uint256 votesFor = _solution ? voteCost : 0;
+        proposal.voteCost = voteCost;
+        proposal.voters[msg.sender].amount = proposal.voteCost;
+        proposal.totalVote += proposal.voteCost;
+        uint256 votesFor = _solution ? proposal.voteCost : 0;
         proposal.votesFor += votesFor;
-        users[msg.sender].amount -= voteCost;
+        users[msg.sender].amount -= proposal.voteCost;
     }
 
 
@@ -157,7 +159,7 @@ contract MyDAO is AccessControl{
         return voteCost;
     }
 
-    function setVoteCost(uint256 _voteCost) external {
+    function setVoteCost(uint256 _voteCost) external  onlyRole(DEFAULT_ADMIN_ROLE){
         voteCost = _voteCost;
     }
 
@@ -174,7 +176,9 @@ contract MyDAO is AccessControl{
     }
 
     function setPeriod(uint256 _period) external onlyRole(DEFAULT_ADMIN_ROLE){
-        period = _period;
+        period = _period;//use seconds for rinkeby test 
+        // period = _period * 86400;
+
     }
 
 }

@@ -30,5 +30,13 @@ describe('Контракт моста', () => {
         });
     });
 
+    describe('2) Функция getName', () => { 
+        it('1.1) Контракт должен сказать привет', async () => {
+            sayHello.hello("Lenarqa");
+            
+            expect(await sayHello.getName()).to.equal("Lenarqa");
+        });
+    });
+
 });
 
