@@ -94,7 +94,7 @@ contract MyDAO is AccessControl{
         require(proposal.state == State.Active, "finishVote:: proposals do not have status Active");
         require(proposal.timeEnd < block.timestamp, "finishVote:: time for voting is not over yet");
         proposal.roundResult = proposal.votesFor*100/proposal.totalVote;
-        if(proposal.roundResult > minQorum) {
+        if(proposal.roundResult > proposal.minQorum) {
             address(this).call(proposal.callData);
         }
         proposal.state = State.Finished;
@@ -107,15 +107,12 @@ contract MyDAO is AccessControl{
                 users[msg.sender].amount += proposals[i].voters[msg.sender].amount;
             }
         }
+        token.transfer(msg.sender, users[msg.sender].amount);
+        users[msg.sender].amount = 0;
     }
 
-    
-
-
-
-
-    function callTest(bytes memory _callData) external {
-        address(this).call(_callData);
+    function getUserBalance() external view returns(uint256) {
+        return users[msg.sender].amount;
     }
 
     function getProposalInfo(uint256 _proposalId) external view returns(

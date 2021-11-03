@@ -250,8 +250,10 @@ describe('Контракт моста', () => {
             await expect(dao.connect(addr1).withdraw()).to.be.revertedWith("withdraw:: not all proposal finished"); 
         });
 
-        it('6.1) Пользователь не может забрать amount если не все голосования завершены', async () => {
+        it('6.2) У пользователя ', async () => {
             let userInfo;
+            let balance;
+
             let callData = web3.eth.abi.encodeFunctionSignature({
                 name: "hello",
                 type: "function",
@@ -278,15 +280,21 @@ describe('Контракт моста', () => {
             await dao.connect(addr1).finishVote(0);
 
             let proposalInfo = await dao.getProposalInfo(0);
-            console.log(proposalInfo.toString());
+            // console.log(proposalInfo.toString());
             
-            userInfo = await dao.getUserProposalInfoFrom(0, addr1.address);
-            console.log("UserInfo before - ", userInfo.toString());
+            // userInfo = await dao.connect(addr1).getUserBalance();
+            // console.log("UserInfo before - ", userInfo.toString());
+            // balance = await token.balanceOf(addr1.address);
+            // console.log("balance before withdraw - ", balance.toString())
 
             await dao.connect(addr1).withdraw();
 
-            userInfo = await dao.getUserProposalInfoFrom(0, addr1.address);
-            console.log("UserInfo after withdraw - ",userInfo.toString());
+            // userInfo = await dao.connect(addr1).getUserBalance();
+            // console.log("UserInfo after withdraw - ",userInfo.toString());
+            balance = await token.balanceOf(addr1.address);
+            // console.log("balance after withdraw - ", balance.toString());
+
+            expect(balance.toString()).to.equal(ethers.utils.parseEther("1001"));
             
         });
 
