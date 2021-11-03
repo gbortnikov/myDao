@@ -36,9 +36,12 @@ contract MyDAO is AccessControl{
         address recipient;
         State state;
         mapping(address => User) voters;
+        uint256 votesFor; //votes for making a decision (true vote)
+        uint256 totalVote;
         uint256 timeBegin;
         uint256 timeEnd;
-        uint256 minQorum; 
+        uint256 minQorum;
+        uint256 roundResult; 
     }
 
     constructor (uint256 _minQorum, uint256 _periodInDays, uint256 _voteCost,address _tokenAddress) {
@@ -73,18 +76,37 @@ contract MyDAO is AccessControl{
     }
 
     function vote(bool _solution, uint256 _proposalId) external {
-        require(proposals[_proposalId].state == State.Active, "vote:: proposals do not have status Active");
-        require(!proposals[_proposalId].voters[msg.sender].voted, "vote:: user has already voted in this poll");
+        Proposal storage proposal = proposals[_proposalId];
+        require(proposal.state == State.Active, "vote:: proposals do not have status Active");
+        require(!proposal.voters[msg.sender].voted, "vote:: user has already voted in this poll");
         require(users[msg.sender].amount > voteCost, "vote:: the user does not have enough tokens on the account");
-        proposals[_proposalId].voters[msg.sender].voted = true;
-        proposals[_proposalId].voters[msg.sender].amount = voteCost;
+        proposal.voters[msg.sender].voted = true;
+        proposal.voters[msg.sender].amount = voteCost;
+        proposal.totalVote += voteCost;
+        uint256 votesFor = _solution ? voteCost : 0;
+        proposal.votesFor += votesFor;
         users[msg.sender].amount -= voteCost;
     }
 
+
     function finishVote(uint256 _proposalId) external {
-        Proposal storage proposal = proposals[proposalId];
+        Proposal storage proposal = proposals[_proposalId];
         require(proposal.state == State.Active, "finishVote:: proposals do not have status Active");
-        require(proposal.timeEnd > block.timestamp, "finishVote:: time for voting is not over yet");
+        require(proposal.timeEnd < block.timestamp, "finishVote:: time for voting is not over yet");
+        proposal.roundResult = proposal.votesFor*100/proposal.totalVote;
+        if(proposal.roundResult > minQorum) {
+            address(this).call(proposal.callData);
+        }
+        proposal.state = State.Finished;
+    }
+
+    function withdraw() external {
+        for (uint256 i = 0; i < proposalId; i++) {
+            require(proposals[i].state == State.Finished, "withdraw:: not all proposal finished");
+            if(proposals[i].state == State.Finished) {
+                users[msg.sender].amount += proposals[i].voters[msg.sender].amount;
+            }
+        }
     }
 
     
@@ -103,6 +125,9 @@ contract MyDAO is AccessControl{
         State,
         uint256,
         uint256,
+        uint256,
+        uint256,
+        uint256,
         uint256
     ) {
         Proposal storage proposal = proposals[_proposalId]; 
@@ -111,9 +136,12 @@ contract MyDAO is AccessControl{
             proposal.callData,
             proposal.recipient,
             proposal.state,
+            proposal.votesFor,
+            proposal.totalVote,
             proposal.timeBegin,
             proposal.timeEnd,
-            proposal.minQorum
+            proposal.minQorum,
+            proposal.roundResult
         );
     }
 

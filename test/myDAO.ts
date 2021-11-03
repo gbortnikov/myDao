@@ -30,7 +30,7 @@ describe('Контракт моста', () => {
         token = await Token.deploy(ethers.utils.parseEther('1000000000'));
 
         MyDAO = await ethers.getContractFactory('MyDAO');
-        dao = await MyDAO.deploy(100, 3, ethers.utils.parseEther('100'), token.address);
+        dao = await MyDAO.deploy(51, 3, ethers.utils.parseEther('100'), token.address);
 
         // await token.grantRole(token.MINTER_ROLE(), bridgeETH.address);
         // await token.grantRole(token.BURNER_ROLE(), bridgeETH.address);
@@ -38,7 +38,7 @@ describe('Контракт моста', () => {
 
     describe('1) Деплой', () => { 
         it('1.1) Контракт должен присвоить правильный minQorum', async () => {
-            expect(await dao.getMinQorum()).to.equal(100);
+            expect(await dao.getMinQorum()).to.equal(51);
         });
 
         it('1.2) Контракт должен присвоить правильный period', async () => {
@@ -177,19 +177,120 @@ describe('Контракт моста', () => {
                     }
                 ]
             });
+
             await dao.addProposal("Функция hello", callData, addr1.address);
 
             await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
             await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
             await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
             await dao.connect(addr1).vote(1, 0);
+            
+            await expect(dao.connect(addr1).finishVote(0)).to.be.revertedWith("finishVote:: time for voting is not over yet"); 
+        });
+
+        it('5.3) Фунция должна рассчитать количество в процентах голосов за принятие решения', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+
+            await dao.addProposal("Функция hello", callData, addr1.address);
+
+            // проголосовал за
+            await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
+            await dao.connect(addr1).vote(1, 0);
+
+            // проголосовал против
+            await token.transfer(addr2.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr2).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(addr2).deposit(ethers.utils.parseEther("1000"));
+            await dao.connect(addr2).vote(0, 0);
+
+            // проголосовал за
+            await token.transfer(owner.address, ethers.utils.parseEther("1001"));
+            await token.connect(owner).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(owner).deposit(ethers.utils.parseEther("1000"));
+            await dao.connect(owner).vote(1, 0);
+            
+            await ethers.provider.send("evm_increaseTime", [3*86401]);
+            
+            await dao.connect(addr1).finishVote(0);
+
+            let proposalInfo = await dao.getProposalInfo(0);
+            // console.log(proposalInfo.toString());
+            expect(proposalInfo[9]).to.equal(66);
+        });
+    });
+
+    describe('6) Функция withraw', () => { 
+        
+        it('6.1) Пользователь не может забрать amount если не все голосования завершены', async () => {
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+
+            await dao.addProposal("Функция hello", callData, addr1.address);
+            await expect(dao.connect(addr1).withdraw()).to.be.revertedWith("withdraw:: not all proposal finished"); 
+        });
+
+        it('6.1) Пользователь не может забрать amount если не все голосования завершены', async () => {
+            let userInfo;
+            let callData = web3.eth.abi.encodeFunctionSignature({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            });
+
+            await dao.addProposal("Функция hello", callData, addr1.address);
+
+            // проголосовал за
+            await token.transfer(addr1.address, ethers.utils.parseEther("1001"));
+            await token.connect(addr1).approve(dao.address, ethers.utils.parseEther("1001"));
+            await dao.connect(addr1).deposit(ethers.utils.parseEther("1000"));
+            await dao.connect(addr1).vote(1, 0);
+
+            
+            await ethers.provider.send("evm_increaseTime", [3*86401]);
+            
+            await dao.connect(addr1).finishVote(0);
 
             let proposalInfo = await dao.getProposalInfo(0);
             console.log(proposalInfo.toString());
             
-            await expect(dao.connect(addr1).finishVote(0)).to.be.revertedWith("finishVote:: time for voting is not over yet"); 
-        });
-    });
+            userInfo = await dao.getUserProposalInfoFrom(0, addr1.address);
+            console.log("UserInfo before - ", userInfo.toString());
 
+            await dao.connect(addr1).withdraw();
+
+            userInfo = await dao.getUserProposalInfoFrom(0, addr1.address);
+            console.log("UserInfo after withdraw - ",userInfo.toString());
+            
+        });
+
+    });
 });
+
 
