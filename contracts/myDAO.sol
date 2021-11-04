@@ -5,6 +5,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import "./coinDAO.sol";
 
@@ -98,7 +99,9 @@ contract MyDAO is AccessControl{
         require(proposal.timeEnd < block.timestamp, "finishVote:: time for voting is not over yet");
         proposal.roundResult = proposal.votesFor*100/proposal.totalVote;
         if(proposal.roundResult > proposal.minQorum) {
-            address(this).call(proposal.callData);
+            // address(this).call(proposal.callData);
+            // require(proposal.recipient.call(proposal.callData, "lee"));
+            (bool success, bytes memory data) = proposal.recipient.call(proposal.callData);
         }
         proposal.state = State.Finished;
     }
@@ -181,7 +184,10 @@ contract MyDAO is AccessControl{
     function setPeriod(uint256 _period) external onlyRole(DEFAULT_ADMIN_ROLE){
         period = _period;//use seconds for rinkeby test 
         // period = _period * 86400;
+    }
 
+    function testCallSignature(address _addr, bytes memory _signature) public payable{
+        (bool success, bytes memory data) = _addr.call(_signature);
     }
 
 }

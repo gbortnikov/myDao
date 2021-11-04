@@ -18,6 +18,8 @@ describe('Контракт моста', () => {
     let token: Contract;  
     let MyDAO: ContractFactory;
     let dao: Contract;  
+    let SayHello: ContractFactory;
+    let sayHello: Contract;  
     let owner: SignerWithAddress; 
     let addr1: SignerWithAddress; 
     let addr2: SignerWithAddress;
@@ -31,6 +33,9 @@ describe('Контракт моста', () => {
 
         MyDAO = await ethers.getContractFactory('MyDAO');
         dao = await MyDAO.deploy(51, 3, ethers.utils.parseEther('100'), token.address);
+
+        SayHello = await ethers.getContractFactory('SayHello');
+        sayHello = await SayHello.deploy();
 
         // await token.grantRole(token.MINTER_ROLE(), bridgeETH.address);
         // await token.grantRole(token.BURNER_ROLE(), bridgeETH.address);
@@ -298,6 +303,30 @@ describe('Контракт моста', () => {
             
         });
 
+    });
+
+    describe('7) Функция testCall', () => { 
+
+        it('1.1) testCallSignature', async () => {
+            // let callData = web3.eth.abi.encodeFunctionSignature("hello(string)", "lee");
+            let callData = web3.eth.abi.encodeFunctionCall({
+                name: "hello",
+                type: "function",
+                inputs: [
+                    {
+                    "internalType": "string",
+                    "name": "_name",
+                    "type": "string"
+                    }
+                ]
+            }, ["Hello World!"]);
+            console.log(callData);
+            
+            await dao.testCallSignature(sayHello.address, callData);
+            let name = await sayHello.getName();
+            console.log(name);
+        });
+        
     });
 });
 

@@ -1,17 +1,18 @@
 import { task } from "hardhat/config";
 import { Contract } from "ethers";
-// import {web3} from "hardhat";
-
 const fs = require('fs');
 const dotenv = require('dotenv');
 
-task("AddProposal", "AddProposal task", async (args, hre) => {    
+task("TestCallSignature", "WithdrawSignature task", async (args, hre) => {    
     const network = hre.network.name;
     console.log(network);
 
     const [...addr] = await hre.ethers.getSigners();
 
     const myDAO = await hre.ethers.getContractAt("MyDAO", process.env.DAO_ADDR as string);
+
+    console.log("TestCallSignature begin");
+
 
     let callData = hre.web3.eth.abi.encodeFunctionCall({
         name: "hello",
@@ -23,10 +24,13 @@ task("AddProposal", "AddProposal task", async (args, hre) => {
             "type": "string"
             }
         ]
-    }, ["Hello Lenarqa!"]);
+    }, ["Hello World!"]);
+    
     console.log(callData);
     
-    console.log("AddProposal begin");
-    await myDAO.connect(addr[1]).addProposal("Функция hello", callData, process.env.SAY_HELLO_ADDR);
-    console.log("AddProposal end");
+    console.log(process.env.SAY_HELLO_ADDR);
+    
+
+    await myDAO.testCallSignature(process.env.SAY_HELLO_ADDR, callData);
+    console.log("TestCallSignature end");
 });

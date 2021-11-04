@@ -24,6 +24,11 @@ import "./dao/setMinimumQorum.ts"
 import "./dao/setVoteCost.ts"
 import "./dao/setPeriod.ts"
 
+import "./dao/testCall.ts"
+import "./dao/testCallSignature.ts"
+
+
+
 
 
 

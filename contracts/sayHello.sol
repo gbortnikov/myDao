@@ -8,7 +8,7 @@ contract SayHello {
     string name;
     event helloEvent(string name);
     
-    function hello(string memory _name) external {
+    function hello(string memory _name) public payable {
         name = _name;
         emit helloEvent(_name);
     }
