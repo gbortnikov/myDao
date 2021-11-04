@@ -1,7 +1,7 @@
 import { config as dotenvConfig } from 'dotenv';
 import '@nomiclabs/hardhat-waffle';
 import "@nomiclabs/hardhat-ethers";
-// import "./tasks/index.ts";
+import "./tasks/index.ts";
 import "@nomiclabs/hardhat-web3";
 
 dotenvConfig();
