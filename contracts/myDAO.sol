@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.2;
 
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
 
 /// @title MyDaO
 /// @author Lenarqa
@@ -14,6 +16,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 contract MyDAO is AccessControl, ReentrancyGuard{
     using SafeERC20 for IERC20;
     
+
     IERC20 public token;
     uint256 public proposalId;
     uint256 public minQuorum;
@@ -83,11 +86,13 @@ contract MyDAO is AccessControl, ReentrancyGuard{
     /// @param _callData the called function as a hash
     /// @param _recipient the address of the contract that will call callData
     function addProposal(string memory _name, bytes memory _callData, address _recipient) external {
+
         require(_recipient != address(0), "addProposal:: recipient = 0");
         Proposal storage proposal = proposals[proposalId];
         proposal.name = _name;
         proposal.callData = _callData;
         proposal.recipient = _recipient;
+
         proposal.minQuorum = minQuorum;
         proposal.timeBegin = block.timestamp;
         proposal.timeEnd = proposal.timeBegin + period;
@@ -107,6 +112,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
 
     /// @notice deposit creates a deposit for the user
     /// @param _amount the number of tokens that the user sends to the deposit
+
     function deposit (uint256 _amount) external {
         require(_amount > 0, "deposit:: amount < 0");
         require(token.balanceOf(msg.sender) >= _amount, "deposit:: user does not have enough money in the account");
@@ -123,6 +129,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         Proposal storage proposal = proposals[_proposalId];
         User storage user = users[msg.sender];
         require(proposal.state == State.Active, "vote:: proposals do not have status Active");
+
         require(!proposal.voters[msg.sender], "vote:: user has already voted in this poll");
         require(userBalance[msg.sender] > 0, "vote:: the user does not have enough tokens on the account");     
         proposal.voters[msg.sender] = true;
@@ -142,6 +149,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         Proposal storage proposal = proposals[_proposalId];
         require(proposal.state == State.Active, "finishVote:: proposals do not have status Active");
         require(proposal.timeEnd < block.timestamp, "finishVote:: time for voting is not over yet");
+
         require(proposal.totalVote >= minQuorum, "finishVote:: not enough users voted"); 
         //я не понял можно ли завершить голосование если minQuorum не преодален, поэтому сделал что нельзя
             // хотя впринципе можно обернуть в if else код с 141 по 150 строчку и если не порог
@@ -178,6 +186,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         userBalance[msg.sender] -= _amount;
         token.safeTransfer(msg.sender, _amount);
         emit Withdraw(msg.sender, userBalance[msg.sender], block.timestamp);
+
     }
 
     /// @notice getUserBalance the function will return information about proposal
@@ -214,8 +223,10 @@ contract MyDAO is AccessControl, ReentrancyGuard{
     /// @param _proposalId proposal id
     /// @param _userAddress user address
     /// @return user info in current proposal
+
     function getUserVoteInfoFromProposal(uint256 _proposalId, address _userAddress) external view returns (bool) {
         Proposal storage proposal = proposals[_proposalId];
         return proposal.voters[_userAddress];
+
     }
 }
