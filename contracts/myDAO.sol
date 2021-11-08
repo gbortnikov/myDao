@@ -21,7 +21,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
     uint256 public proposalId;
     uint256 public minQuorum;
     uint256 public period;
-    uint256 public voteCost;
+    uint256 public voteCost;// не используется!!!!
 
     enum State {
         Undefined,
@@ -47,7 +47,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         uint256 timeEnd;
         uint256 minQuorum;
         uint256 voteResult;
-        uint256 voteCost;
+        uint256 voteCost;// не используется!!!!
         bool successfully;
     }
 
@@ -66,7 +66,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
     );
 
     event Deposit(address userAddress, uint256 amount);
-    event Vote(uint256 proposalId, address msgSender, bool solution, uint256 userBalance, uint256 totalVote, uint256 time);
+    event Vote(uint256 proposalId, address msgSender, bool solution, uint256 userBalance, uint256 totalVote, uint256 time); 
     event FinishVote(uint256 proposalId, address msgSender, bool Successfully, uint256 time);
     event Withdraw(address msgSender, uint256 userBalance, uint256 time);
 
@@ -94,7 +94,7 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         proposal.recipient = _recipient;
 
         proposal.minQuorum = minQuorum;
-        proposal.timeBegin = block.timestamp;
+        proposal.timeBegin = block.timestamp;       // необязательно это записывать в storage, достаточно в евент 
         proposal.timeEnd = proposal.timeBegin + period;
         proposal.state = State.Active;
         
@@ -115,11 +115,13 @@ contract MyDAO is AccessControl, ReentrancyGuard{
 
     function deposit (uint256 _amount) external {
         require(_amount > 0, "deposit:: amount < 0");
-        require(token.balanceOf(msg.sender) >= _amount, "deposit:: user does not have enough money in the account");
+        require(token.balanceOf(msg.sender) >= _amount, "deposit:: user does not have enough money in the account"); // лишний require данную проверку сделает safeTransferFrom 
         token.safeTransferFrom(msg.sender, address(this), _amount);
-        userBalance[msg.sender] = _amount;
+        userBalance[msg.sender] = _amount;  // я писал что есть грубая ошибка в тестах ты должен был увидеть ее 
+        // если я сделал депозит 100, а потом еще 5 то а итоге у меня будет 5 
+        //  userBalance[msg.sender] += _amount; // потнрял плюс 
         
-        emit Deposit(msg.sender, _amount);
+        emit Deposit(msg.sender, _amount); // во всех евентах лучще указывать timestamp
     }
 
     /// @notice vote voting function
@@ -133,13 +135,17 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         require(!proposal.voters[msg.sender], "vote:: user has already voted in this poll");
         require(userBalance[msg.sender] > 0, "vote:: the user does not have enough tokens on the account");     
         proposal.voters[msg.sender] = true;
+        
+        // с 142 до 148 полностью не правильная логика 
+        // если я сделал депозит 1000 токенов то и должен голосовать всей 1000
+        // а по твоей логике человек который внес 1000 и человек который внес 1 имеют одникавое количество голосов 
         proposal.totalVote += 1;
         uint256 votesFor = _solution ? 1 : 0;
         proposal.votesFor += votesFor;
         
         user.proposalsId[user.totalVotes] = _proposalId;
         user.totalVotes++;
-
+    
         emit Vote(_proposalId, msg.sender, _solution, userBalance[msg.sender], proposal.totalVote, block.timestamp);
     }
 
@@ -154,9 +160,9 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         //я не понял можно ли завершить голосование если minQuorum не преодален, поэтому сделал что нельзя
             // хотя впринципе можно обернуть в if else код с 141 по 150 строчку и если не порог
                 // не пройдет то завершать голосование proposal.state = State.Finished, но не присваивать proposal.successfully = true;
-        
+        // да надо было засунуть в if как ты и написал 
         if(proposal.votesFor*100/proposal.totalVote > 50) {
-            (bool success, bytes memory data) = proposal.recipient.call(proposal.callData);
+            (bool success, bytes memory data) = proposal.recipient.call(proposal.callData);     // не используется дата можно было сделать так (bool success,) =
             proposal.voteResult = proposal.votesFor*100/proposal.totalVote; //оставил чтобы отслеживать результаты в процентах
             if(!success) {
                 proposal.state = State.BrokenCallData;
@@ -168,6 +174,8 @@ contract MyDAO is AccessControl, ReentrancyGuard{
             proposal.state = State.Finished;
             proposal.successfully = true;
         }
+         // proposal.state = State.Finished; лучше вынести, меньше кода 
+        
         
         emit FinishVote(_proposalId, msg.sender, proposal.successfully, block.timestamp); 
     }
@@ -185,7 +193,12 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         require(isAllProposalEnd != false, "withraw:: not all proposals is finished");
         userBalance[msg.sender] -= _amount;
         token.safeTransfer(msg.sender, _amount);
-        emit Withdraw(msg.sender, userBalance[msg.sender], block.timestamp);
+        emit Withdraw(msg.sender, userBalance[msg.sender], block.timestamp);        // вместо userBalance[msg.sender] лучше отправлять _amount
+        //что бы сделать без цикла можно было просто хранить время когда заканчивается голосование
+        //это бы уменьшило бы количество используемых переменных 
+        // пример: голосование №1 заканчивается 22,10,2021 ты записываешь в переменную lockwithdraw это число
+        // голосование №2 заканчивается 25,10,2021 проверяешь lockwithdraw если оно меньше то перезаписываешь 
+        // голосование №3 заканчивается 21,10,2021 проверяешь lockwithdraw если оно больше  то оставляешь 
 
     }
 
@@ -229,4 +242,9 @@ contract MyDAO is AccessControl, ReentrancyGuard{
         return proposal.voters[_userAddress];
 
     }
+    
+    
+    // куда пропали сетеры    setVoteCost и тд
+    
+ 
 }
